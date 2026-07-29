@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+
+  test-api:
+    name: API — Build, test, coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 21 (temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
+        working-directory: api
+
+      - name: Build and run checks (unit + Testcontainers integration tests)
+        run: ./gradlew check --no-daemon
+        working-directory: api
+
+      - name: SonarCloud analysis (push)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.SONAR_ORGANIZATION != ''
+        run: ./gradlew sonar --no-daemon -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }} -Dsonar.projectKey=apchavez_spring-jpa-native -Dsonar.projectName=spring-jpa-native -Dsonar.scanner.skipJreProvisioning=true
+        working-directory: api
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+
+      - name: SonarCloud analysis (pull_request)
+        if: github.event_name == 'pull_request' && vars.SONAR_ORGANIZATION != '' && github.actor != 'dependabot[bot]'
+        run: >
+          ./gradlew sonar --no-daemon
+          -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+          -Dsonar.projectKey=apchavez_spring-jpa-native
+          -Dsonar.projectName=spring-jpa-native
+          -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
+          -Dsonar.pullrequest.branch=${{ github.head_ref }}
+          -Dsonar.pullrequest.base=${{ github.base_ref }}
+          -Dsonar.scanner.skipJreProvisioning=true
+        working-directory: api
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+
+      - name: Upload JaCoCo coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: api/build/reports/jacoco/test/html/
+          retention-days: 30
+
+  build-mobile:
+    name: Mobile — Lint & typecheck (Expo)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check mobile app exists
+        id: check
+        run: |
+          if [ -f "mobile/package.json" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node.js
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        if: steps.check.outputs.exists == 'true'
+        run: npm ci
+        working-directory: mobile
+
+      - name: Run tests with coverage
+        if: steps.check.outputs.exists == 'true'
+        run: npx jest --coverage --ci
+        working-directory: mobile
+
+      - name: Expo doctor
+        if: steps.check.outputs.exists == 'true'
+        run: npx expo-doctor
+        working-directory: mobile
+
+      - name: TypeScript typecheck
+        if: steps.check.outputs.exists == 'true'
+        run: npx tsc --noEmit
+        working-directory: mobile
