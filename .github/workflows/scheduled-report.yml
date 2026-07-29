@@ -1,0 +1,88 @@
+name: Scheduled Inventory Report
+
+on:
+  schedule:
+    - cron: "0 8 * * 1" # weekly, Monday 08:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-and-deliver:
+    name: Seed data, generate report, deliver
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Start the stack
+        run: docker compose up -d --build postgres redis kafka api
+
+      - name: Wait for the API to become healthy
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
+              echo "API is up."
+              exit 0
+            fi
+            echo "Waiting for API... ($i/30)"
+            sleep 5
+          done
+          echo "::error::API never became healthy"
+          docker compose logs
+          exit 1
+
+      - name: Log in as demo admin
+        id: login
+        run: |
+          TOKEN=$(curl -sf -X POST http://localhost:8080/api/v1/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"username":"admin","password":"admin123"}' | \
+            node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(0,'utf-8')).token)")
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Seed extra sample products
+        env:
+          TOKEN: ${{ steps.login.outputs.token }}
+        run: |
+          for i in 1 2 3 4 5; do
+            curl -sf -X POST http://localhost:8080/api/v1/products \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{\"sku\":\"RPT-$(date +%s)-$i\",\"name\":\"Reporte Producto $i\",\"description\":\"Producto sembrado por scheduled-report\",\"categoryId\":1,\"price\":$((i * 25)).99,\"stock\":$((i * 10)),\"active\":true}" \
+              > /dev/null
+          done
+
+      - name: Fetch inventory summary report
+        env:
+          TOKEN: ${{ steps.login.outputs.token }}
+        run: |
+          curl -sf http://localhost:8080/api/v1/reports/inventory-summary \
+            -H "Authorization: Bearer $TOKEN" -o inventory-summary.json
+          cat inventory-summary.json
+
+      - name: Upload report as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory-summary-${{ github.run_id }}
+          path: inventory-summary.json
+          retention-days: 30
+
+      - name: Email report (optional)
+        if: ${{ vars.REPORT_EMAIL != '' && vars.SMTP_SERVER != '' }}
+        uses: dawidd6/action-send-mail@v6
+        with:
+          server_address: ${{ vars.SMTP_SERVER }}
+          server_port: ${{ vars.SMTP_PORT || '587' }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "Reporte semanal de inventario — spring-jpa-native"
+          to: ${{ vars.REPORT_EMAIL }}
+          from: "spring-jpa-native Scheduled Report"
+          body: "Resumen de inventario generado automáticamente a partir de datos de muestra sembrados por este mismo workflow. Adjunto: JSON."
+          attachments: inventory-summary.json
+
+      - name: Tear down the stack
+        if: always()
+        run: docker compose down -v
