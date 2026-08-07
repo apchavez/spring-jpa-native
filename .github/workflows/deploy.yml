@@ -158,7 +158,7 @@ jobs:
           kubectl rollout status deployment/kafka -n product-service-jpa --timeout=120s
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
 
       - name: Deploy app with Helm
         run: |
