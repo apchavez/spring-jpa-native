@@ -1,0 +1,26 @@
+# Gradle
+api/.gradle/
+api/build/
+!api/gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node / Expo (frontend, added later)
+node_modules/
+.expo/
+dist/
+web-build/
+*.log
+npm-debug.log*
+
+# Env
+.env
+.env.local
+mobile/.claude/

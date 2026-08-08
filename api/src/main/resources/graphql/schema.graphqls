@@ -1,0 +1,57 @@
+"""
+Segunda superficie de API sobre el mismo dominio que expone el REST en /api/v1/**.
+No duplica reglas de negocio: cada resolver delega en ProductApplicationService /
+CategoryApplicationService, los mismos application services que usa ProductController.
+
+Product.category se resuelve vía un DataLoader (ver ProductGraphQLController /
+DataLoaderConfig) — el equivalente, a nivel de resolver, del @EntityGraph que evita
+N+1 en el REST: listar N productos vía `products` hace 2 queries SQL en total
+(una para los productos, una en batch para las categorías referenciadas), no N+1.
+"""
+type Product {
+    id: ID!
+    sku: String!
+    name: String!
+    description: String
+    category: Category!
+    price: Float!
+    stock: Int!
+    active: Boolean!
+}
+
+type Category {
+    id: ID!
+    name: String!
+}
+
+type ProductPage {
+    items: [Product!]!
+    totalCount: Int!
+    page: Int!
+    size: Int!
+}
+
+type Query {
+    product(id: ID!): Product
+    products(page: Int! = 0, size: Int! = 20, activeOnly: Boolean! = true): ProductPage!
+    categories: [Category!]!
+}
+
+input CreateProductInput {
+    sku: String!
+    name: String!
+    description: String
+    categoryId: ID!
+    price: Float!
+    stock: Int!
+    active: Boolean! = true
+}
+
+input CreateCategoryInput {
+    name: String!
+}
+
+type Mutation {
+    createProduct(input: CreateProductInput!): Product!
+    createCategory(input: CreateCategoryInput!): Category!
+}

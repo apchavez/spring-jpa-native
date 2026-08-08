@@ -1,0 +1,79 @@
+name: Load Tests (k6)
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Test scenario'
+        required: true
+        default: smoke
+        type: choice
+        options:
+          - smoke
+          - load
+          - spike
+
+jobs:
+  k6:
+    name: k6 — ${{ inputs.scenario }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Start the stack
+        run: docker compose up -d --build postgres redis kafka api
+
+      - name: Wait for the API to become healthy
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
+              echo "API is up."
+              exit 0
+            fi
+            echo "Waiting for API... ($i/30)"
+            sleep 5
+          done
+          echo "::error::API never became healthy"
+          docker compose logs
+          exit 1
+
+      - name: Log in as demo admin
+        id: login
+        run: |
+          TOKEN=$(curl -sf -X POST http://localhost:8080/api/v1/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"username":"admin","password":"admin123"}' | \
+            node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(0,'utf-8')).token)")
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Install k6
+        run: |
+          sudo gpg --no-default-keyring \
+            --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 \
+            --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update && sudo apt-get install -y k6
+
+      - name: Run k6
+        run: |
+          k6 run k6/product-api.js \
+            --env BASE_URL=http://localhost:8080 \
+            --env API_TOKEN=${{ steps.login.outputs.token }} \
+            --env SCENARIO=${{ inputs.scenario }} \
+            --summary-export k6-summary.json
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: k6-results-${{ inputs.scenario }}
+          path: k6-summary.json
+
+      - name: Tear down the stack
+        if: always()
+        run: docker compose down -v

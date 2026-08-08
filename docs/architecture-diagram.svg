@@ -1,0 +1,87 @@
+<svg viewBox="0 0 1180 460" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b" />
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1180" height="460" fill="#f8fafc" />
+
+  <text x="20" y="34" font-size="20" font-weight="700" fill="#0f172a">spring-jpa-native — Product Management Platform</text>
+  <text x="20" y="56" font-size="13" fill="#64748b">Spring Boot + JPA/Hibernate + React Native (Expo) + REST/GraphQL + PostgreSQL + Kafka, Kubernetes</text>
+
+  <g>
+    <rect x="30" y="110" width="170" height="60" rx="10" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5" />
+    <text x="115" y="135" text-anchor="middle" font-size="12.5" font-weight="600" fill="#312e81">Cliente React Native</text>
+    <text x="115" y="153" text-anchor="middle" font-size="10" fill="#4338ca">Expo, mobile</text>
+  </g>
+
+  <g>
+    <rect x="240" y="110" width="200" height="60" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5" />
+    <text x="340" y="132" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1e3a8a">ProductController /</text>
+    <text x="340" y="147" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1e3a8a">CategoryController</text>
+    <text x="340" y="163" text-anchor="middle" font-size="9" fill="#1e40af">REST + GraphQL</text>
+  </g>
+
+  <g>
+    <rect x="480" y="110" width="200" height="60" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5" />
+    <text x="580" y="135" text-anchor="middle" font-size="12.5" font-weight="700" fill="#14532d">ProductApplicationService</text>
+    <text x="580" y="153" text-anchor="middle" font-size="9.5" fill="#166534">capa de aplicación</text>
+  </g>
+
+  <g>
+    <rect x="720" y="60" width="200" height="55" rx="10" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5" />
+    <text x="820" y="83" text-anchor="middle" font-size="12" font-weight="700" fill="#14532d">ProductDomainService</text>
+    <text x="820" y="99" text-anchor="middle" font-size="9.5" fill="#166534">reglas de negocio puras</text>
+  </g>
+
+  <g>
+    <rect x="720" y="140" width="200" height="55" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5" />
+    <text x="820" y="163" text-anchor="middle" font-size="11" font-weight="700" fill="#1e3a8a">ProductRepositoryPort</text>
+    <text x="820" y="179" text-anchor="middle" font-size="9.5" fill="#1e40af">puerto de salida</text>
+  </g>
+
+  <g>
+    <rect x="960" y="110" width="200" height="60" rx="10" fill="#e0e7ff" stroke="#4f46e5" stroke-width="1.5" />
+    <text x="1060" y="132" text-anchor="middle" font-size="11.5" font-weight="700" fill="#312e81">ProductPersistenceAdapter</text>
+    <text x="1060" y="150" text-anchor="middle" font-size="9" fill="#3730a3">JPA/Hibernate, @EntityGraph</text>
+  </g>
+
+  <g>
+    <ellipse cx="1060" cy="270" rx="120" ry="42" fill="#fef3c7" stroke="#d97706" stroke-width="1.5" />
+    <text x="1060" y="262" text-anchor="middle" font-size="12" font-weight="700" fill="#78350f">PostgreSQL</text>
+    <text x="1060" y="279" text-anchor="middle" font-size="9.5" fill="#92400e">Product ⟶ Category</text>
+    <text x="1060" y="294" text-anchor="middle" font-size="9.5" fill="#92400e">sin N+1, optimistic lock</text>
+  </g>
+
+  <g>
+    <rect x="480" y="240" width="200" height="60" rx="10" fill="#fae8ff" stroke="#a21caf" stroke-width="1.5" />
+    <text x="580" y="265" text-anchor="middle" font-size="12" font-weight="700" fill="#701a75">KafkaProductEventPublisher</text>
+    <text x="580" y="283" text-anchor="middle" font-size="9.5" fill="#86198f">ProductEventPublisherPort</text>
+  </g>
+
+  <g>
+    <rect x="240" y="240" width="150" height="60" rx="10" fill="#f3e8ff" stroke="#a21caf" stroke-width="1.5" />
+    <text x="315" y="265" text-anchor="middle" font-size="12" font-weight="700" fill="#701a75">Kafka</text>
+    <text x="315" y="283" text-anchor="middle" font-size="9.5" fill="#86198f">product-events</text>
+  </g>
+
+  <g>
+    <rect x="30" y="340" width="1120" height="100" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    <text x="50" y="366" font-size="12" font-weight="700" fill="#0f172a">Notas de diseño</text>
+    <text x="50" y="388" font-size="10.5" fill="#334155">Quinto hermano de Product Management, enfoque distinto a los otros 4: demuestra JPA/Hibernate (relaciones Product⟶Category,</text>
+    <text x="50" y="406" font-size="10.5" fill="#334155">fix de N+1 vía @EntityGraph, bloqueo optimista, auditoría) con API dual REST+GraphQL y frontend móvil React Native en vez de web.</text>
+    <text x="50" y="424" font-size="10.5" fill="#334155">También cuenta con Helm chart propio y stack Prometheus+Grafana desde antes del alineamiento del portafolio.</text>
+  </g>
+
+  <line x1="200" y1="140" x2="238" y2="140" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" />
+  <line x1="440" y1="140" x2="478" y2="140" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" />
+  <line x1="680" y1="120" x2="718" y2="95" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow)" />
+  <line x1="680" y1="150" x2="718" y2="165" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)" />
+  <line x1="920" y1="160" x2="958" y2="145" stroke="#64748b" stroke-width="1.8" marker-end="url(#arrow)" />
+  <line x1="1060" y1="170" x2="1060" y2="228" stroke="#d97706" stroke-width="1.8" marker-end="url(#arrow)" />
+  <line x1="580" y1="170" x2="580" y2="238" stroke="#a21caf" stroke-width="1.8" marker-end="url(#arrow)" />
+  <line x1="480" y1="270" x2="392" y2="270" stroke="#a21caf" stroke-width="1.8" marker-end="url(#arrow)" />
+
+  <text x="20" y="455" font-size="10.5" fill="#94a3b8">Hermano de Product Management (5 stacks) — mismo dominio, mismo tópico Kafka product-events, único con frontend móvil.</text>
+</svg>

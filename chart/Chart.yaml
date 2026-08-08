@@ -1,0 +1,6 @@
+apiVersion: v2
+name: product-service
+description: Product Service API — Spring Boot 21 (MVC + JPA/Hibernate), Postgres, Redis, Kafka
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
