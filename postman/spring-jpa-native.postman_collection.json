@@ -1,0 +1,645 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-4789-a012-000000000001",
+		"name": "spring-jpa-native — Product Service API",
+		"description": "Product Service API (Spring MVC + JPA/Hibernate, hexagonal architecture). Uses {{baseUrl}} and a Bearer {{token}} captured automatically from the login requests.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login (admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const status = pm.response.code;",
+									"pm.test('Login succeeded (200)', () => pm.expect(status).to.eql(200));",
+									"if (status === 200) {",
+									"    const body = pm.response.json();",
+									"    pm.environment.set('token', body.token);",
+									"    pm.test('Token captured', () => pm.expect(body.token).to.be.a('string').and.not.empty);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Logs in as the demo ADMIN user (admin/admin123) and captures the returned JWT into {{token}} via the Tests script."
+					}
+				},
+				{
+					"name": "Login (user)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const status = pm.response.code;",
+									"pm.test('Login succeeded (200)', () => pm.expect(status).to.eql(200));",
+									"if (status === 200) {",
+									"    const body = pm.response.json();",
+									"    pm.environment.set('token', body.token);",
+									"    pm.test('Token captured', () => pm.expect(body.token).to.be.a('string').and.not.empty);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"user\",\n  \"password\": \"user123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Logs in as the demo USER user (user/user123) and captures the returned JWT into {{token}} via the Tests script. Run 'Login (admin)' again afterwards if you need ADMIN-only endpoints (create category, create product, import, update, delete)."
+					}
+				}
+			]
+		},
+		{
+			"name": "Categories",
+			"item": [
+				{
+					"name": "Create category",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Electrónica\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/categories",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"categories"
+							]
+						},
+						"description": "ADMIN-only. Creates a new product category."
+					}
+				},
+				{
+					"name": "List categories",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/categories",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"categories"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Products",
+			"item": [
+				{
+					"name": "Create product",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"SKU-001\",\n  \"name\": \"Wireless Mouse\",\n  \"description\": \"Mouse inalámbrico ergonómico\",\n  \"categoryId\": 1,\n  \"price\": 29.99,\n  \"stock\": 150,\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products"
+							]
+						},
+						"description": "categoryId must reference an existing category (create one first, or use id 1). Returns 409 if the SKU already exists."
+					}
+				},
+				{
+					"name": "Import products (CSV)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/products/import",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"import"
+							]
+						},
+						"description": "NOTE: this endpoint (multipart CSV bulk import) may be newly added / still in flight in this repo — verify it exists on the branch you're testing before relying on it. Required CSV header/columns in order: sku,name,description,categoryId,price,stock,active. Select a local .csv file for the 'file' form field before sending. A malformed file or wrong header returns 400 for the whole request; individual bad rows are reported per-row in the 200 response instead of aborting the import."
+					}
+				},
+				{
+					"name": "List active products",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/products/active?page=0&size=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"active"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "List inactive products",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/products/inactive?page=0&size=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"inactive"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Search products by name prefix",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/products/search?prefix=Wireless&page=0&size=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"search"
+							],
+							"query": [
+								{
+									"key": "prefix",
+									"value": "Wireless"
+								},
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Case-insensitive prefix search by product name."
+					}
+				},
+				{
+					"name": "Get product by SKU",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/products/sku/SKU-001",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"sku",
+								"SKU-001"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get product by id",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/products/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update product",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"SKU-001\",\n  \"name\": \"Wireless Mouse v2\",\n  \"description\": \"Mouse inalámbrico ergonómico (v2)\",\n  \"categoryId\": 1,\n  \"price\": 34.99,\n  \"stock\": 120,\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/products/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"1"
+							]
+						},
+						"description": "Full replace of the product with the given id. May return 409 on an optimistic-locking conflict (@Version)."
+					}
+				},
+				{
+					"name": "Delete product",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/products/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"1"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Reports",
+			"item": [
+				{
+					"name": "Inventory summary",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/reports/inventory-summary",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reports",
+								"inventory-summary"
+							]
+						},
+						"description": "Active/inactive product totals, stock and inventory value (active products only), broken down by category."
+					}
+				}
+			]
+		},
+		{
+			"name": "GraphQL",
+			"description": "Segunda superficie de API sobre el mismo dominio que REST — misma autenticacion JWT, mismos application services por debajo. Ver la seccion GraphQL del README para el por que.",
+			"item": [
+				{
+					"name": "Query — Products (nested category, no N+1)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query ProductsList($page: Int!, $size: Int!, $activeOnly: Boolean!) {\n  products(page: $page, size: $size, activeOnly: $activeOnly) {\n    totalCount\n    page\n    size\n    items {\n      id\n      sku\n      name\n      category { id name }\n      price\n      stock\n      active\n    }\n  }\n}",
+								"variables": "{\n  \"page\": 0,\n  \"size\": 20,\n  \"activeOnly\": true\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Un solo viaje trae la pagina de productos con su categoria anidada (resuelta por DataLoader en batch — ver ProductNPlusOneGraphQLTest en el backend)."
+					},
+					"response": []
+				},
+				{
+					"name": "Mutation — Create Category (ADMIN only)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateCategory($input: CreateCategoryInput!) {\n  createCategory(input: $input) {\n    id\n    name\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"name\": \"Postman GraphQL Category\"\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Requiere rol ADMIN — con un token USER o sin token, la respuesta trae un array errors[] no vacio (o 401 si no hay token en absoluto)."
+					},
+					"response": []
+				},
+				{
+					"name": "Mutation — Create Product (ADMIN only)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateProduct($input: CreateProductInput!) {\n  createProduct(input: $input) {\n    id\n    sku\n    name\n    category { id name }\n    price\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"sku\": \"PM-GQL-1\",\n    \"name\": \"Postman GraphQL Product\",\n    \"categoryId\": 1,\n    \"price\": 9.99,\n    \"stock\": 5,\n    \"active\": true\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "categoryId debe referenciar una categoria ya existente (usa la que crea el request anterior, o el ID sembrado 1)."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

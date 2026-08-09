@@ -1,0 +1,188 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Ephemeral kind deploy + smoke test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: spring-jpa-native
+
+      - name: Build API image
+        run: docker build -t spring-jpa-native-api:ci -f api/Dockerfile api
+
+      - name: Load image into kind
+        run: kind load docker-image spring-jpa-native-api:ci --name spring-jpa-native
+
+      - name: Create namespace
+        run: kubectl create namespace product-service-jpa
+
+      - name: Deploy Postgres
+        run: |
+          kubectl apply -n product-service-jpa -f - <<'EOF'
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: postgres
+          spec:
+            replicas: 1
+            selector:
+              matchLabels: { app: postgres }
+            template:
+              metadata:
+                labels: { app: postgres }
+              spec:
+                containers:
+                  - name: postgres
+                    image: postgres:16-alpine
+                    env:
+                      - name: POSTGRES_USER
+                        value: postgres
+                      - name: POSTGRES_PASSWORD
+                        value: ci-smoke-pass
+                      - name: POSTGRES_DB
+                        value: productdb
+                    ports:
+                      - containerPort: 5432
+                    readinessProbe:
+                      exec:
+                        command: ["pg_isready", "-U", "postgres"]
+                      initialDelaySeconds: 5
+                      periodSeconds: 5
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: postgres
+          spec:
+            selector: { app: postgres }
+            ports:
+              - port: 5432
+          EOF
+
+      - name: Deploy Redis
+        run: |
+          kubectl apply -n product-service-jpa -f - <<'EOF'
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: redis
+          spec:
+            replicas: 1
+            selector:
+              matchLabels: { app: redis }
+            template:
+              metadata:
+                labels: { app: redis }
+              spec:
+                containers:
+                  - name: redis
+                    image: redis:7-alpine
+                    ports:
+                      - containerPort: 6379
+                    readinessProbe:
+                      exec:
+                        command: ["redis-cli", "ping"]
+                      initialDelaySeconds: 5
+                      periodSeconds: 5
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: redis
+          spec:
+            selector: { app: redis }
+            ports:
+              - port: 6379
+          EOF
+
+      - name: Deploy Kafka (KRaft, single node)
+        run: |
+          kubectl apply -n product-service-jpa -f - <<'EOF'
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: kafka
+          spec:
+            replicas: 1
+            selector:
+              matchLabels: { app: kafka }
+            template:
+              metadata:
+                labels: { app: kafka }
+              spec:
+                containers:
+                  - name: kafka
+                    image: bitnami/kafka:3.7
+                    env:
+                      - name: KAFKA_CFG_NODE_ID
+                        value: "0"
+                      - name: KAFKA_CFG_PROCESS_ROLES
+                        value: "controller,broker"
+                      - name: KAFKA_CFG_LISTENERS
+                        value: "PLAINTEXT://:9092,CONTROLLER://:9093"
+                      - name: KAFKA_CFG_ADVERTISED_LISTENERS
+                        value: "PLAINTEXT://kafka:9092"
+                      - name: KAFKA_CFG_CONTROLLER_QUORUM_VOTERS
+                        value: "0@localhost:9093"
+                      - name: KAFKA_CFG_CONTROLLER_LISTENER_NAMES
+                        value: "CONTROLLER"
+                      - name: ALLOW_PLAINTEXT_LISTENER
+                        value: "yes"
+                    ports:
+                      - containerPort: 9092
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: kafka
+          spec:
+            selector: { app: kafka }
+            ports:
+              - port: 9092
+          EOF
+
+      - name: Wait for dependencies
+        run: |
+          kubectl rollout status deployment/postgres -n product-service-jpa --timeout=120s
+          kubectl rollout status deployment/redis -n product-service-jpa --timeout=120s
+          kubectl rollout status deployment/kafka -n product-service-jpa --timeout=120s
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Deploy app with Helm
+        run: |
+          helm upgrade --install spring-jpa-native ./chart \
+            --namespace product-service-jpa \
+            --set image.repository=spring-jpa-native-api \
+            --set image.tag=ci \
+            --set image.pullPolicy=Never \
+            --set secrets.dbUser=postgres \
+            --set secrets.dbPassword=ci-smoke-pass \
+            --set secrets.kafkaUser=ci-smoke-user \
+            --wait --timeout=180s
+
+      - name: Rollout status
+        run: kubectl rollout status deployment/product-service -n product-service-jpa --timeout=120s
+
+      - name: Smoke test
+        run: |
+          kubectl run curl-smoke --image=curlimages/curl:8.10.1 -n product-service-jpa --restart=Never --command -- \
+            sh -c "sleep 5 && curl -sf http://product-service:80/actuator/health"
+          kubectl wait --for=condition=Ready pod/curl-smoke -n product-service-jpa --timeout=60s || true
+          kubectl logs curl-smoke -n product-service-jpa --tail=50
+          kubectl get pod curl-smoke -n product-service-jpa -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}' | grep -q '^0$'
+
+      - name: Delete kind cluster
+        if: always()
+        run: kind delete cluster --name spring-jpa-native

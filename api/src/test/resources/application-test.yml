@@ -1,0 +1,17 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        generate_statistics: true
+  flyway:
+    locations: classpath:db/migration
+security:
+  cors:
+    allowed-origins: ""
+management:
+  health:
+    redis:
+      enabled: false

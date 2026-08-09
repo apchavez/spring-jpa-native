@@ -1,0 +1,54 @@
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: ghcr.io/apchavez/spring-jpa-native-api
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+service:
+  type: ClusterIP
+  port: 80
+
+config:
+  springProfile: prod
+  db:
+    host: postgres
+    port: "5432"
+    name: productdb
+  redis:
+    host: redis
+    port: "6379"
+  kafka:
+    bootstrapServers: kafka:9092
+  otel:
+    endpoint: http://otel-collector:4318/v1/traces
+
+secrets:
+  dbUser: postgres
+  dbPassword: postgres
+  kafkaUser: product-service
+  kafkaPassword: ""
+  redisPassword: ""
+
+ingress:
+  enabled: false
+  ingressClassName: nginx
+  host: product-service.local
+
+hpa:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  cpuUtilization: 70
+  memoryUtilization: 80
