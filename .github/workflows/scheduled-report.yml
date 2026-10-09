@@ -63,7 +63,7 @@ jobs:
           cat inventory-summary.json
 
       - name: Upload report as workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: inventory-summary-${{ github.run_id }}
           path: inventory-summary.json
